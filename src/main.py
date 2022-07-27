@@ -93,6 +93,7 @@ def download(session):
 
 
 def pep(session):
+    global card_status, table_status
     response = get_response(session, MAIN_PEP_URL)
     if response is None:
         return
@@ -114,21 +115,21 @@ def pep(session):
         for tag in main_card_dl_tag:
             if tag.name == 'dt' and tag.text == 'Status:':
                 card_status = tag.next_sibling.next_sibling.string
-                if card_status not in count_of_pep_status_in_card.keys():
-                    count_of_pep_status_in_card[card_status] = 1
-                else:
-                    count_of_pep_status_in_card[card_status] += 1
-                if len(peps_row[i].td.text) != 1:
-                    table_status = peps_row[i].td.text[1:]
-                    if card_status[0] != table_status:
-                        logging.info(
-                            '\n'
-                            'Несовпадающие статусы:\n'
-                            f'{pep_link}\n'
-                            f'Статус в карточке: {card_status}\n'
-                            f'Ожидаемые статусы: '
-                            f'{EXPECTED_STATUS[table_status]}\n'
-                        )
+        if card_status not in count_of_pep_status_in_card.keys():
+            count_of_pep_status_in_card[card_status] = 1
+        else:
+            count_of_pep_status_in_card[card_status] += 1
+        if len(peps_row[i].td.text) != 1:
+            table_status = peps_row[i].td.text[1:]
+        if card_status[0] != table_status:
+            logging.info(
+                '\n'
+                'Несовпадающие статусы:\n'
+                f'{pep_link}\n'
+                f'Статус в карточке: {card_status}\n'
+                f'Ожидаемые статусы: '
+                f'{EXPECTED_STATUS[table_status]}\n'
+                    )
     for key in count_of_pep_status_in_card:
         result.append((key, str(count_of_pep_status_in_card[key])))
     result.append(('Total', len(peps_row)-1))

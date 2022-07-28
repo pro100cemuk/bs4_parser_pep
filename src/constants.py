@@ -16,3 +16,5 @@ EXPECTED_STATUS = {
     'W': ['Withdrawn'],
     '': ['Draft', 'Active'],
 }
+LOG_DIR = BASE_DIR / 'logs'
+RESULTS_DIR = BASE_DIR / 'results'

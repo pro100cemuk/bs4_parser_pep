@@ -9,12 +9,10 @@ from constants import BASE_DIR, DATETIME_FORMAT
 
 def control_output(results, cli_args):
     output = cli_args.output
-    if output == 'pretty':
-        pretty_output(results)
-    elif output == 'file':
-        file_output(results, cli_args)
+    if output == 'file':
+        OUTPUT_TYPES[output](results, cli_args)
     else:
-        default_output(results)
+        OUTPUT_TYPES[output](results)
 
 
 def default_output(results):
@@ -42,3 +40,10 @@ def file_output(results, cli_args):
         writer = csv.writer(f, dialect='unix')
         writer.writerows(results)
     logging.info(f'Файл с результатами был сохранён: {file_path}')
+
+
+OUTPUT_TYPES = {
+    'pretty': pretty_output,
+    'file': file_output,
+    None: default_output,
+}

@@ -1,5 +1,6 @@
 import logging
 import re
+from collections import defaultdict
 from urllib.parse import urljoin
 
 import requests_cache
@@ -15,8 +16,6 @@ from utils import find_tag, get_response
 def whats_new(session):
     whats_new_url = urljoin(MAIN_DOC_URL, 'whatsnew/')
     response = get_response(session, whats_new_url)
-    if response is None:
-        return
     soup = BeautifulSoup(response.text, features='lxml')
     main_div = find_tag(soup, 'section', attrs={'id': 'what-s-new-in-python'})
     div_with_ul = find_tag(main_div, 'div', attrs={'class': 'toctree-wrapper'})
@@ -30,8 +29,6 @@ def whats_new(session):
         href = version_a_tag['href']
         version_link = urljoin(whats_new_url, href)
         response = get_response(session, version_link)
-        if response is None:
-            continue
         soup = BeautifulSoup(response.text,
                              features='lxml')
         h1 = find_tag(soup, 'h1')
@@ -45,8 +42,6 @@ def whats_new(session):
 
 def latest_versions(session):
     response = get_response(session, MAIN_DOC_URL)
-    if response is None:
-        return
     soup = BeautifulSoup(response.text, 'lxml')
     sidebear = find_tag(soup, 'div', attrs={'class': 'sphinxsidebarwrapper'})
     ul_tags = sidebear.find_all('ul')
@@ -72,8 +67,6 @@ def latest_versions(session):
 def download(session):
     downloads_url = urljoin(MAIN_DOC_URL, 'download.html')
     response = get_response(session, downloads_url)
-    if response is None:
-        return
     soup = BeautifulSoup(response.text, 'lxml')
     main_tag = find_tag(soup, 'div', {'role': 'main'})
     table_tag = find_tag(main_tag, 'table', {'class': 'docutils'})
@@ -93,21 +86,16 @@ def download(session):
 
 
 def pep(session):
-    global card_status, table_status
     response = get_response(session, MAIN_PEP_URL)
-    if response is None:
-        return
     soup = BeautifulSoup(response.text, 'lxml')
     main_tag = find_tag(soup, 'section', {'id': 'numerical-index'})
     peps_row = main_tag.find_all('tr')
-    count_of_pep_status_in_card = {}
+    count_status_in_card = defaultdict(int)
     result = [('Статус', 'Количество')]
     for i in range(1, len(peps_row)):
         pep_href_tag = peps_row[i].a['href']
         pep_link = urljoin(MAIN_PEP_URL, pep_href_tag)
         response = get_response(session, pep_link)
-        if response is None:
-            return
         soup = BeautifulSoup(response.text, 'lxml')
         main_card_tag = find_tag(soup, 'section', {'id': 'pep-content'})
         main_card_dl_tag = find_tag(main_card_tag, 'dl',
@@ -115,23 +103,21 @@ def pep(session):
         for tag in main_card_dl_tag:
             if tag.name == 'dt' and tag.text == 'Status:':
                 card_status = tag.next_sibling.next_sibling.string
-        if card_status not in count_of_pep_status_in_card.keys():
-            count_of_pep_status_in_card[card_status] = 1
-        else:
-            count_of_pep_status_in_card[card_status] += 1
-        if len(peps_row[i].td.text) != 1:
-            table_status = peps_row[i].td.text[1:]
-        if card_status[0] != table_status:
-            logging.info(
-                '\n'
-                'Несовпадающие статусы:\n'
-                f'{pep_link}\n'
-                f'Статус в карточке: {card_status}\n'
-                f'Ожидаемые статусы: '
-                f'{EXPECTED_STATUS[table_status]}\n'
-                    )
-    for key in count_of_pep_status_in_card:
-        result.append((key, str(count_of_pep_status_in_card[key])))
+                count_status_in_card[card_status] = count_status_in_card.get(
+                    card_status, 0) + 1
+                if len(peps_row[i].td.text) != 1:
+                    table_status = peps_row[i].td.text[1:]
+                    if card_status[0] != table_status:
+                        logging.info(
+                            '\n'
+                            'Несовпадающие статусы:\n'
+                            f'{pep_link}\n'
+                            f'Статус в карточке: {card_status}\n'
+                            f'Ожидаемые статусы: '
+                            f'{EXPECTED_STATUS[table_status]}\n'
+                                )
+    for key in count_status_in_card:
+        result.append((key, str(count_status_in_card[key])))
     result.append(('Total', len(peps_row)-1))
     return result
 
